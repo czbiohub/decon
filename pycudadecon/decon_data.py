@@ -1,40 +1,49 @@
+"""
+READ THIS FIRST
+
+Code must be run from command line
+After modifying paths below, type:
+"python decon_data.py" to execute
+
+"""
 from pycudadecon import decon
 import tifffile
 import os
 import numpy as np
 
-import multiprocessing
-
-# https://stackoverflow.com/questions/20887555/dead-simple-example-of-using-multiprocessing-queue-pool-and-locking
-
+# paths
 dir = "Z:\\ComputationalMicroscopy\\SpinningDisk\\Processed\\Decon_raw"
-experiment = "\\2019_04_08_U2OS_plin2_Lipid_MT_Actin_3"
-# experiment = "\\2019_04_08_U2OS_plin2_Lipid_MT_Actin_Slide2_2"
+# experiment = "\\2019_04_08_U2OS_plin2_Lipid_MT_Actin_3"
+experiment = "\\2019_04_08_U2OS_plin2_Lipid_MT_Actin_Slide2_2"
 outdir = "Z:\\ComputationalMicroscopy\\SpinningDisk\\Processed\\Decon_processed\\SIM_PSF"+experiment
 if not os.path.exists(outdir):
     os.mkdir(outdir)
 
+
+# PSF
 kernels = {'405': "405_64x64_SIM.tif",
           '488': "488_64x64_SIM.tif",
           '561': "561_64x64_SIM.tif",
           '637': "637_64x64_SIM.tif"}
 
+# Channels and corresponding string
 channels = {'488': '\\Zyla_488_Widefield_tiffstack.tif',
             '561': '\\Zyla_561_Widefield_tiffstack.tif',
             '637': '\\Zyla_637_Widefield_tiffstack.tif'}
 
 positions = ['\\'+name for name in os.listdir(dir+experiment)
               if os.path.isdir(os.path.join(dir+experiment, name))]
-positions_set = {'\\'+name for name in os.listdir(dir+experiment)
-              if os.path.isdir(os.path.join(dir+experiment, name))}
 
 wavelengths = {'405': 430,
                '488': 515,
                '561': 585,
                '637': 655}
 
+# set range on position if want a subset
+for pos in positions[:]:
+    if not os.path.exists(outdir+pos):
+        os.mkdir(outdir+pos)
 
-def proc_channel(pos):
     for chan in channels:
         data = dir+experiment+pos+channels[chan]
         psf = dir+"\\"+kernels[chan]
@@ -54,20 +63,3 @@ def proc_channel(pos):
             out_filename = '\\img_000000000_Zyla_%s_Widefield_%03d.tif' % (chan, zIdx)
             tifffile.imsave(outdir+pos+out_filename, result[zIdx].astype(dtype=np.uint16))
 
-
-def mp_worker(pos):
-    print('========== processing position %s ==========' % pos)
-    if not os.path.exists(outdir + pos):
-        os.mkdir(outdir + pos)
-    proc_channel(pos)
-    print("========== Process \tDONE ==========")
-
-
-# subset positions if you want to try on only a few
-def mp_handler():
-    p = multiprocessing.Pool(3)
-    p.map(mp_worker, positions[:])
-
-
-if __name__ == '__main__':
-    mp_handler()
